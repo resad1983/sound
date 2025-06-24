@@ -56,7 +56,7 @@ function draw() {
   if (isRunning) {
     let vol = mic.getLevel();
     let dB = 20 * Math.log10(vol + 0.0001);
-    volumePercent = constrain(map(dB, -60, 0, 0, 100), 0, 100);
+    volumePercent = constrain(map(dB, -65, 0, 0, 100), 0, 100);
 
     let spectrum = fft.analyze();
     let bass = fft.getEnergy("bass");
