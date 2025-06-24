@@ -3,18 +3,15 @@ let mic, fft;
 let isRunning = false;
 let startButton, stopButton;
 let volumePercent = 0;
-let thresholdPercent =25;
-
-let particleCount;
+let thresholdPercent = 25;
+let particleCount = 500;
+let mode = 1; // 模式 1~4
+let targetPositions = [];
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
   noStroke();
   colorMode(HSB, 360, 100, 100, 100);
-
-  // 裝置判斷，自動調整粒子數量
-  let isMobile = /Android|webOS|iPhone|iPad/i.test(navigator.userAgent);
-  particleCount = isMobile ? 50 : 1000;
 
   mic = new p5.AudioIn();
   fft = new p5.FFT();
@@ -24,19 +21,19 @@ function setup() {
     particles.push(new Particle());
   }
 
+  generateTargetPositions();
+
   startButton = createButton('開始');
   startButton.position(20, 20);
-  startButton.touchStarted(startMic); // 手機支援
   startButton.mousePressed(startMic);
 
   stopButton = createButton('停止');
   stopButton.position(100, 20);
-  stopButton.touchStarted(stopMic);
   stopButton.mousePressed(stopMic);
 }
 
 function startMic() {
-  userStartAudio(); // 📌 啟用音訊（必要）
+  userStartAudio();
   mic.start();
   isRunning = true;
 }
@@ -48,6 +45,7 @@ function stopMic() {
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
+  generateTargetPositions();
 }
 
 function draw() {
@@ -67,8 +65,10 @@ function draw() {
     let sat = map(bass, 0, random(255), 50, 100);
     let bri = map(mid, 0, 255, 30, 100);
 
-    for (let p of particles) {
-      p.update(volumePercent, baseHue, sat, bri);
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      const target = targetPositions[i % targetPositions.length];
+      p.update(volumePercent, baseHue, sat, bri, target);
       p.display();
     }
 
@@ -76,10 +76,70 @@ function draw() {
     textSize(16);
     text(`音量: ${nf(volumePercent, 2, 1)}%`, 20, 70);
     text(`FPS: ${nf(frameRate(), 2, 0)}`, 20, 90);
+    text(`模式: ${mode}`, 20, 110);
   } else {
     fill(0, 0, 100);
     textSize(16);
     text("請點擊『開始』以啟動聲音互動", 20, 70);
+  }
+}
+
+function keyPressed() {
+  if (key === '1' || key === '2' || key === '3' || key === '4') {
+    mode = int(key);
+    generateTargetPositions();
+  }
+}
+
+function generateTargetPositions() {
+  targetPositions = [];
+  const cx = width / 2;
+  const cy = height / 2;
+  const r = min(width, height) / 4;
+  const count = particleCount;
+
+  if (mode === 1) { // 圓形
+    for (let i = 0; i < count; i++) {
+      let angle = TWO_PI * i / count;
+      targetPositions.push(createVector(cx + cos(angle) * r, cy + sin(angle) * r));
+    }
+  } else if (mode === 2) { // 三角形
+    const corners = [
+      createVector(cx, cy - r),
+      createVector(cx - r * sin(PI / 3), cy + r / 2),
+      createVector(cx + r * sin(PI / 3), cy + r / 2)
+    ];
+    distributeAlongEdges(corners);
+  } else if (mode === 3) { // 正方形
+    const corners = [
+      createVector(cx - r, cy - r),
+      createVector(cx + r, cy - r),
+      createVector(cx + r, cy + r),
+      createVector(cx - r, cy + r)
+    ];
+    distributeAlongEdges(corners);
+  } else if (mode === 4) { // 六邊形
+    const corners = [];
+    for (let i = 0; i < 6; i++) {
+      let angle = TWO_PI * i / 6 - HALF_PI;
+      corners.push(createVector(cx + cos(angle) * r, cy + sin(angle) * r));
+    }
+    distributeAlongEdges(corners);
+  }
+}
+
+function distributeAlongEdges(corners) {
+  const segs = corners.length;
+  const pointsPerEdge = floor(particleCount / segs);
+  for (let i = 0; i < segs; i++) {
+    let a = corners[i];
+    let b = corners[(i + 1) % segs];
+    for (let j = 0; j < pointsPerEdge; j++) {
+      let t = j / pointsPerEdge;
+      let x = lerp(a.x, b.x, t);
+      let y = lerp(a.y, b.y, t);
+      targetPositions.push(createVector(x, y));
+    }
   }
 }
 
@@ -91,23 +151,20 @@ class Particle {
     this.color = color(random(360), 80, 80);
   }
 
-  update(volumePercent, hueBase, sat, bri) {
+  update(volumePercent, hueBase, sat, bri, target) {
     if (volumePercent < thresholdPercent) {
-      let noiseVec = p5.Vector.random2D().mult(map(volumePercent, 0, thresholdPercent, 3, 0.5));
-      this.vel.add(noiseVec);
+      this.vel.add(p5.Vector.random2D().mult(1.5));
     } else {
-      let center = createVector(width / 2, height / 2);
-      let dir = p5.Vector.sub(center, this.pos);
-      dir.setMag(map(volumePercent, thresholdPercent, 100, 0.5, 3));
+      let dir = p5.Vector.sub(target, this.pos);
+      dir.setMag(map(volumePercent, thresholdPercent, 100, 0.1, 2));
       this.vel.add(dir);
     }
-
-    this.vel.limit(5);
+    this.vel.limit(3);
     this.pos.add(this.vel);
     this.pos.x = constrain(this.pos.x, 0, width);
     this.pos.y = constrain(this.pos.y, 0, height);
 
-    let hueOffset = random(-50, 50);
+    let hueOffset = random(-30, 30);
     this.color = color((hueBase + hueOffset + 360) % 360, sat, bri, 100);
   }
 
