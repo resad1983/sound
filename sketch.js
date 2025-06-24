@@ -15,8 +15,8 @@ function setup() {
 
   // 判斷是否為手機
   isMobile = /Android|webOS|iPhone|iPad/i.test(navigator.userAgent);
-  thresholdPercent = isMobile ? 50 : 30;
-  particleCount = isMobile ? 100 : 1000;
+  thresholdPercent = isMobile ? 40 : 30;
+  particleCount = isMobile ? 50 : 1000;
 
   mic = new p5.AudioIn();
   fft = new p5.FFT();
