@@ -3,19 +3,17 @@ let mic, fft;
 let isRunning = false;
 let startButton, stopButton;
 let volumePercent = 0;
+let thresholdPercent =25;
 
-let thresholdPercent;
 let particleCount;
-let isMobile;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
   noStroke();
   colorMode(HSB, 360, 100, 100, 100);
 
-  // 判斷是否為手機
-  isMobile = /Android|webOS|iPhone|iPad/i.test(navigator.userAgent);
-  thresholdPercent = isMobile ? 40 : 30;
+  // 裝置判斷，自動調整粒子數量
+  let isMobile = /Android|webOS|iPhone|iPad/i.test(navigator.userAgent);
   particleCount = isMobile ? 50 : 1000;
 
   mic = new p5.AudioIn();
@@ -26,28 +24,19 @@ function setup() {
     particles.push(new Particle());
   }
 
-  // 建立按鈕
   startButton = createButton('開始');
   startButton.position(20, 20);
-  startButton.touchStarted(startMic);
+  startButton.touchStarted(startMic); // 手機支援
   startButton.mousePressed(startMic);
 
   stopButton = createButton('停止');
-  stopButton.position(160, 20);
+  stopButton.position(100, 20);
   stopButton.touchStarted(stopMic);
   stopButton.mousePressed(stopMic);
-
-  // ✅ 手機按鈕放大
-  if (isMobile) {
-    startButton.style('font-size', '24px');
-    startButton.size(120, 60);
-    stopButton.style('font-size', '24px');
-    stopButton.size(120, 60);
-  }
 }
 
 function startMic() {
-  userStartAudio(); // 手機必需
+  userStartAudio(); // 📌 啟用音訊（必要）
   mic.start();
   isRunning = true;
 }
@@ -85,12 +74,12 @@ function draw() {
 
     fill(0, 0, 100);
     textSize(16);
-    text(`音量: ${nf(volumePercent, 2, 1)}%`, 20, 100);
-    text(`FPS: ${nf(frameRate(), 2, 0)}`, 20, 120);
+    text(`音量: ${nf(volumePercent, 2, 1)}%`, 20, 70);
+    text(`FPS: ${nf(frameRate(), 2, 0)}`, 20, 90);
   } else {
     fill(0, 0, 100);
     textSize(16);
-    text("請點擊『開始』以啟動聲音互動", 20, 100);
+    text("請點擊『開始』以啟動聲音互動", 20, 70);
   }
 }
 
