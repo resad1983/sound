@@ -4,62 +4,62 @@ let mic, fft;
 let isRunning = false;
 let startButton, stopButton;
 let volumePercent = 0;
-let thresholdPercent = 30;
+let thresholdPercent = 20;
+let spectrum = [];
+let particleCount;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
   noStroke();
   colorMode(HSB, 360, 100, 100, 100);
+  frameRate(30); // 手機友善 fps
+
+  // 手機裝置自動減少粒子數
+  let isMobile = /Mobi|Android/i.test(navigator.userAgent);
+  particleCount = isMobile ? 400 : 1000;
 
   mic = new p5.AudioIn();
   fft = new p5.FFT();
   fft.setInput(mic);
 
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < particleCount; i++) {
     particles.push(new Particle());
   }
 
   startButton = createButton('開始');
   startButton.position(20, 20);
-  startButton.touchStarted(startMic); // 手機支援
-  startButton.mousePressed(startMic);
+  startButton.mousePressed(() => {
+    mic.start();
+    isRunning = true;
+  });
 
   stopButton = createButton('停止');
-  stopButton.position(100, 20);
-  stopButton.touchStarted(stopMic);
-  stopButton.mousePressed(stopMic);
-}
-
-function startMic() {
-  userStartAudio(); // 📌 關鍵：啟用使用者音訊互動（手機與分享頁支援）
-  mic.start();
-  isRunning = true;
-}
-
-function stopMic() {
-  mic.stop();
-  isRunning = false;
-}
-
-function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
+  stopButton.position(80, 20);
+  stopButton.mousePressed(() => {
+    mic.stop();
+    isRunning = false;
+  });
 }
 
 function draw() {
   background(0, 0, 10);
 
   if (isRunning) {
-    let vol = mic.getLevel();
+    let vol = mic.getLevel(); // 0~1
     let dB = 20 * Math.log10(vol + 0.0001);
     volumePercent = constrain(map(dB, -60, 0, 0, 100), 0, 100);
 
-    let spectrum = fft.analyze();
+    // 降低 FFT 執行頻率
+    if (frameCount % 3 === 0) {
+      spectrum = fft.analyze();
+    }
+
     let bass = fft.getEnergy("bass");
     let mid = fft.getEnergy("mid");
     let treble = fft.getEnergy("treble");
 
     let baseHue = map(treble, 0, random(255), 0, 360);
-    let sat = map(bass, 0, random(255), 30, 100);
+    let sat = map(bass, 0, random(255), 50, 100);
     let bri = map(mid, 0, 255, 30, 100);
 
     for (let p of particles) {
@@ -69,11 +69,11 @@ function draw() {
 
     fill(0, 0, 100);
     textSize(16);
-    text(`音量: ${nf(volumePercent, 2, 1)}%`, 20, 70);
+    text(`音量: ${nf(volumePercent, 2, 1)}%`, 20, 60);
   } else {
     fill(0, 0, 100);
     textSize(16);
-    text("請點擊『開始』以啟動聲音互動", 20, 70);
+    text("請點擊「開始」以啟動聲音互動", 20, 70);
   }
 }
 
