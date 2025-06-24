@@ -3,7 +3,7 @@ let mic, fft;
 let isRunning = false;
 let startButton, stopButton;
 let volumePercent = 0;
-let thresholdPercent =25;
+let thresholdPercent =30;
 
 let particleCount;
 
