@@ -3,7 +3,7 @@ let mic, fft;
 let isRunning = false;
 let startButton, stopButton;
 let volumePercent = 0;
-let thresholdPercent =30;
+let thresholdPercent =25;
 
 let particleCount;
 
@@ -63,7 +63,7 @@ function draw() {
     let mid = fft.getEnergy("mid");
     let treble = fft.getEnergy("treble");
 
-    let baseHue = map(treble, 0, random(255), 0, 360);
+    let baseHue = map(treble, 0, random(255), 10, 360);
     let sat = map(bass, 0, random(255), 50, 100);
     let bri = map(mid, 0, 255, 30, 100);
 
